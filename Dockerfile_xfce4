@@ -1,0 +1,37 @@
+# First we get and update last Ubuntu image
+FROM	ubuntu
+ENV DEBIAN_FRONTEND noninteractive
+RUN	apt-get update
+RUN	apt-get install -y language-pack-fr
+
+# Second we install VNC, noVNC and websockify
+RUN	apt-get install -y --no-install-recommends x11vnc xvfb
+RUN	apt-get install -y --no-install-recommends novnc websockify
+
+# And finally the xfce4 desktop environment
+RUN	apt-get install -y --no-install-recommends dbus-x11 && apt-get install -y xfce4
+
+# We can add additionnal GUI program (ex: firefox)
+RUN	apt-get install -y --no-install-recommends firefox notepadqq
+
+# We add a simple user with sudo rights
+RUN	groupadd user && useradd -g user -m user && apt-get install -y --no-install-recommends sudo && echo 'user     ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Two ports are availables: 5900 for VNC client, and 6080 for browser access via websockify
+EXPOSE	5900 6080
+
+# And here is the statup script, everything else is in there
+COPY	startup.sh /startup.sh
+RUN	chmod 755 /startup.sh
+
+# We set localtime
+ARG	TZ=${TZ:-Etc/UTC}
+RUN	if [ "X${TZ}" != "X" ] ; then if [ -f /usr/share/zoneinfo/${TZ} ] ; then rm -f /etc/localtime ; ln -s /usr/share/zoneinfo/${TZ} /etc/localtime ; fi ; fi
+
+# We do some cleaning
+RUN apt-get clean && rm -rf /var/cache/apt/*
+
+# We change user
+USER	user
+
+ENTRYPOINT [ "/startup.sh" ]
